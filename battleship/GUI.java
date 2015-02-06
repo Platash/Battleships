@@ -22,24 +22,13 @@ import javax.swing.JOptionPane;
 import javax.swing.JTextArea;
 
 public class GUI extends JFrame{
-    public static final int WINDOW_SIZE_X = 900;
-    public static final int WINDOW_SIZE_Y = 650;
-    public static final int CELL_SIZE = 40;
-    public static final int UNIT_SIZE = 38;
-    public static final int FIELD_SIZE = 400;
-    public static final int FIELD_1_X = 30;
-    public static final int FIELD_1_Y = 100;
-    public static final int FIELD_2_X = 460;
-    public static final int FIELD_2_Y = 100;
-    public static final int SHIP_COUNT = 21;
-    
-    //private Boolean game;
-    private BufferedImage ship;
-    private BufferedImage shipDead;
-    private BufferedImage shot;
-    private JLabel text;
-    private Battleships battleships;
-    private MyPanel panel;
+    protected static final int WINDOW_SIZE_X = 900;
+    protected static final int WINDOW_SIZE_Y = 650;
+    private static BufferedImage ship;
+    private static BufferedImage shipDead;
+    private static BufferedImage shot;
+    protected JLabel text;
+    protected MyPanel panel;
         
     public GUI (){
         super("Battleships");
@@ -50,13 +39,11 @@ public class GUI extends JFrame{
         add(panel);
         setResizable(false);
         setVisible(true);
-        battleships = new Battleships();
-        battleships.setGame(true);
     }
     
    
     
-    class MyPanel extends JPanel implements MouseListener {
+    class MyPanel extends JPanel{
         
         public MyPanel() {
             text = new JLabel("Let's start. Your move!");
@@ -69,9 +56,8 @@ public class GUI extends JFrame{
                 @Override
                 public void actionPerformed(ActionEvent e){
                     if (e.getSource() == newGame) {
-                        battleships = new Battleships();
+                        Battleships.startNewGame();
                         text.setText("Let's start. Your move!");
-                        battleships.setGame(true);
                         repaint();
                     } 
                 }
@@ -111,7 +97,7 @@ public class GUI extends JFrame{
             });
             setLayout(new FlowLayout(FlowLayout.LEFT));
             setBorder(BorderFactory.createLineBorder(Color.black));
-            addMouseListener(this);
+            addMouseListener(new MyMouseListener());
             add(Box.createRigidArea(new Dimension(30,80)));
             add (newGame);
             add (about);
@@ -129,20 +115,23 @@ public class GUI extends JFrame{
             shipDead = openImg("shipDead.png");
             shot = openImg("shot.png");
             g2.drawImage(background, null, 0, 0);
-            g2.drawImage(field, null, FIELD_1_X-2, FIELD_1_Y-2);
-            g2.drawImage(field, null, FIELD_2_X-2, FIELD_2_Y-2);
+            g2.drawImage(field, null, Field.FIELD_1_X-2, Field.FIELD_1_Y-2);
+            g2.drawImage(field, null, Field.FIELD_2_X-2,Field. FIELD_2_Y-2);
             
-            for (int i=0; i<Battleships.CELLS_IN_ROW; i++) {
+            for (int i=0; i<Field.CELLS_IN_ROW; i++) {
                 for (int j=0; j<10; j++){
-                    switch (battleships.getMyField()[i][j]) {
-                        case Battleships.SHIP_DEAD:
-                            g2.drawImage(shipDead, null, FIELD_1_X+CELL_SIZE*j, FIELD_1_Y+CELL_SIZE*i);
+                    switch (Battleships.getPlayerFieldCell(j, i)) {
+                        case Field.SHIP_DEAD:
+                            g2.drawImage(shipDead, null, Field.FIELD_1_X + Field.CELL_SIZE * j, 
+                                    Field.FIELD_1_Y + Field.CELL_SIZE * i);
                             break;
-                        case Battleships.SHIP: 
-                            g2.drawImage(ship, null, FIELD_1_X+CELL_SIZE*j, FIELD_1_Y+CELL_SIZE*i);
+                        case Field.SHIP: 
+                            g2.drawImage(ship, null, Field.FIELD_1_X + Field.CELL_SIZE * j, 
+                                    Field.FIELD_1_Y + Field.CELL_SIZE * i);
                             break;
-                        case Battleships.SHOT:
-                            g2.drawImage(shot, null, FIELD_1_X+CELL_SIZE*j, FIELD_1_Y+CELL_SIZE*i);
+                        case Field.SHOT:
+                            g2.drawImage(shot, null, Field.FIELD_1_X + Field.CELL_SIZE * j, 
+                                    Field.FIELD_1_Y + Field.CELL_SIZE * i);
                             break;
                         default:
                             break;
@@ -151,15 +140,18 @@ public class GUI extends JFrame{
             }
             for (int i=0; i<10; i++) {
                 for (int j=0; j<10; j++){
-                    switch (battleships.getEnemyField()[i][j]) {
-                        case Battleships.SHIP_DEAD:
-                            g2.drawImage(shipDead, null, FIELD_2_X+CELL_SIZE*j, FIELD_2_Y+CELL_SIZE*i);
+                    switch (Battleships.getEnemyFieldCell(j, i)) {
+                        case Field.SHIP_DEAD:
+                            g2.drawImage(shipDead, null, Field.FIELD_2_X + Field.CELL_SIZE * j, 
+                                    Field.FIELD_2_Y + Field.CELL_SIZE * i);
                             break;
-                        case Battleships.SHIP: 
-                            g2.drawImage(ship, null, FIELD_2_X+CELL_SIZE*j, FIELD_2_Y+CELL_SIZE*i);
+                        case Field.SHIP: 
+                            g2.drawImage(ship, null, Field.FIELD_2_X + Field.CELL_SIZE * j, 
+                                    Field.FIELD_2_Y + Field.CELL_SIZE * i);
                             break;
-                        case Battleships.SHOT:
-                            g2.drawImage(shot, null, FIELD_2_X+CELL_SIZE*j, FIELD_2_Y+CELL_SIZE*i);
+                        case Field.SHOT:
+                            g2.drawImage(shot, null, Field.FIELD_2_X + Field.CELL_SIZE*j, 
+                                    Field.FIELD_2_Y + Field.CELL_SIZE * i);
                             break;
                         default:
                             break;
@@ -178,52 +170,18 @@ public class GUI extends JFrame{
             }
             return img;
         }
-        
-        @Override
-        public void mouseClicked(MouseEvent e) {
-            if (battleships.getGame()) {
-                int x = (int)Math.floor((e.getX() - (double)FIELD_2_X) / (double)CELL_SIZE);
-                int y = (int)Math.floor((e.getY() - (double)FIELD_2_Y) / (double)CELL_SIZE);
-                if (x < 0 || y < 0 || x >= Battleships.CELLS_IN_ROW || y >= Battleships.CELLS_IN_ROW ) {
-                    return;
-                }
-                if (battleships.movePlayer (x, y) == Battleships.SHIP) {
-                    text.setText("");
-                } else {
-                    text.setText("");
-                }
-                panel.paintImmediately(120, 20, 600,40);
-                panel.paintImmediately(FIELD_2_X+CELL_SIZE*x, FIELD_2_Y+CELL_SIZE*y, 40,40);
-
-                while (battleships.getMoveAI()){
-                    battleships.chooseMove();
-                    x = battleships.getLastMove()[0];
-                    y = battleships.getLastMove()[1];
-                    panel.paintImmediately(FIELD_1_X+CELL_SIZE*x, FIELD_1_Y+CELL_SIZE*y, 40,40);
-                }
-                if (battleships.getScoreAI() == Battleships.SHIP_COUNT || 
-                        battleships.getScorePlayer() == Battleships.SHIP_COUNT) {
-                        battleships.gameOver ();
-                }
-            }
-            panel.repaint();
-        }
-        
-        
-     
-        @Override
-        public void mouseEntered(MouseEvent e) {}
-
-        @Override
-        public void mouseExited(MouseEvent e) {}
-
-        @Override
-        public void mousePressed(MouseEvent e) {}
-
-        @Override
-        public void mouseReleased(MouseEvent e) {}
+    }
     
-       
+    public void setText(String text) {
+        this.text.setText(text);
+    }
+    
+    public void updateGraphics() {
+        panel.repaint();
+    }
+    
+    public void updateGraphics(int x1, int y1, int x2, int y2) {
+        panel.paintImmediately(x1, y1, x2, y2);
     }
     
     public JLabel getJLabel () {

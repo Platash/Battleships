@@ -1,710 +1,164 @@
 package battleship;
 
+import java.awt.Point;
 import java.util.*;
 
 public class Battleships {
     
-    
-    public static final int EMPTY = 0;
-    public static final int SHIP = 1;
-    public static final int SHIP_DEAD = 2;
-    public static final int DMZ = 3;
-    public static final int SHOT = 4;
-    public static final int CELLS_IN_ROW = 10;
-    public static final int SHIP_COUNT = 21;
-    
-    private boolean game;
-    private boolean moveAI = false;
-    private int [][] myField = new int [10][10];
-    private int [][] enemyField = new int [10][10];
-    private int [][] enemyFieldShow = new int [10][10];
-    
-    private boolean horyzontal;
-    private boolean right;
-    private boolean down;
-    private int scorePlayer;
-    private int scoreAI;
-    private int hits;
-    private int misses;
-    private int shipSize;
-    
-    private int [] firstHit = new int [2];
-    private int [] nextMove = new int [2];
-    private int [] lastMove = new int [2];
-    
-    private static GUI window;
-    
-    //Battleship class constructor. Creates and randomly places 7 ships on each board - player's and PC's
-    public Battleships () {
-        placeShipAuto (5, myField);
-        placeShipAuto (4, myField);
-        placeShipAuto (3, myField);
-        placeShipAuto (3, myField);
-        placeShipAuto (2, myField);
-        placeShipAuto (2, myField);
-        placeShipAuto (2, myField);
-
-        placeShipAuto (5, enemyField);
-        placeShipAuto (4, enemyField);
-        placeShipAuto (3, enemyField);
-        placeShipAuto (3, enemyField);
-        placeShipAuto (2, enemyField);
-        placeShipAuto (2, enemyField);
-        placeShipAuto (2, enemyField);
-        
-        removeDMZ (); 
-    }
-    
+    protected static boolean game;
+    protected static boolean moveAI;
+    private static Field playerField;
+    private static Field enemyField;
+    private static Field playerProbField;
+    private static boolean hr;
+    private static boolean hl;
+    private static boolean vd;
+    private static boolean vu;
+    private static boolean limitR;
+    private static boolean limitL;
+    private static boolean limitU;
+    private static boolean limitD;
+    private static int hits;
+    private static int firstHitX;
+    private static int firstHitY;
+    private static Random random;
+    protected static GUI window;
     
     
     public static void main(String[] args) {
-        
-        window = new GUI ();
+        startNewGame();
     }
     
+    public static void startNewGame() {
+        playerField = new Field(true);
+        enemyField = new Field(true);
+        playerProbField = new Field(false);
+        game = true;
+        moveAI = false;
+        hits = 0;
+        random = new Random();
+        hr = false;
+        hl = false;
+        vu = false;
+        vd = false;
+        limitR = false;
+        limitL = false;
+        limitD = false;
+        limitU = false;
+        if(window == null) {
+            window = new GUI();
+        } else {
+            window.updateGraphics();
+        }
+    }
     
     //Players move analysis
-    public int movePlayer (int x, int y) {
-         int result = SHOT;
-         switch (enemyField[y][x]) {
-                    case SHIP :
-                        result = SHIP;
-                        enemyFieldShow[y][x] = SHIP_DEAD;
-                        enemyField[y][x] = SHIP_DEAD;
-                        scorePlayer +=1;
-                        if (scorePlayer == SHIP_COUNT) {
-                            gameOver();
-                        }
-                        break;
-                    case EMPTY :
-                        enemyFieldShow[y][x] = SHOT;
-                        enemyField[y][x] = SHOT;
-                        result = EMPTY;
-                        moveAI = true;
-                        break;
-                    default:
-                        break;
-                }
-            return result;
+    public static void runMovePlayer(int x, int y) {
+        if(enemyField.playerScore == Field.SHIPCELL_COUNT) {
+            gameOver();
+            return;
+        }
+        switch (enemyField.getCell(x, y)) {
+                case Field.SHIP :
+                    enemyField.setCell(x, y, Field.SHIP_DEAD);
+                    enemyField.playerScore++;
+                    break;
+                case Field.EMPTY :
+                    enemyField.setCell(x, y, Field.SHOT);
+                    moveAI = true;
+                    runMoveAI();
+                    break;
+            }
+        window.updateGraphics(Field.FIELD_2_X + Field.CELL_SIZE * x, 
+                Field.FIELD_2_Y + Field.CELL_SIZE * y, Field.CELL_SIZE, Field.CELL_SIZE);
     }
     
+       
     //Choosing Move algorithm depending on having enemy ship hit already or not
-    public void chooseMove () {
+    public static void runMoveAI() {
         if (hits == 0) {
-            aiMove();
-        } else if (hits == 1) {
-            aiMove2 ();
-        } else {
-            aiMove3 ();
-        }
-        
+            runMoveAI1();
+        } else if (hits > 0) {
+            runMoveAI2 (firstHitX, firstHitY);
+        }         
     }
     
-    //First (random) AI move
-    public void aiMove () {
-
-            Random random = new Random();
-            int x;
-            int y;
-            hits = 0;
-            misses = 0;
-            x = random.nextInt(10);
-            y = random.nextInt(10);
-            switch (myField [y][x]) {
-                case SHIP:
-                    firstHit[0] = x;
-                    firstHit[1] = y;
-                    lastMove[0] = x;
-                    lastMove[1] = y;
-                    myField[y][x] = SHIP_DEAD;
-                    scoreAI +=1;
-                    hits +=1;
-                    if (random.nextBoolean()) {
-                        switch (x) {
-                            case 0: 
-                                misses += 1;
-                                x +=1;
-                                right = true;
-                                break;
-                            case 9:
-                                misses += 1;
-                                x -=1;
-                                right = false;
-                                break;
-                            default: 
-                                x +=1;
-                                right = true;
-                                break;
-                        }
-                        horyzontal = true;
-                    } else {
-                        switch (y) {
-                            case 0: 
-                                misses += 1;
-                                y +=1;
-                                down = true;
-                                break;
-                            case 9:
-                                misses += 1;
-                                y -=1;
-                                down = false;
-                                break;
-                            default: 
-                                y +=1;
-                                down = true;
-                                break;
-                        }
-                        horyzontal = false;
-                    }
-                    nextMove[0] = x;
-                    nextMove[1] = y;
-                    break;
-                case EMPTY:
-                    myField[y][x] = SHOT;
-                    moveAI = false;
-                    break;
-                default:
-                    break;
-            }
-            window.getPanel().paintImmediately(GUI.FIELD_2_X+GUI.CELL_SIZE*x, GUI.FIELD_2_Y+GUI.CELL_SIZE*y, 40,40);
-       }
-        
-       
-    public void aiMove2 () {
-            try {
-                Thread.sleep(200);
-            } catch(InterruptedException ex) {
-                Thread.currentThread().interrupt();
-            }
-            int x = nextMove [0];
-            int y = nextMove [1];
-            lastMove[0] = x;
-            lastMove[1] = y;
-            
-            switch (myField [y][x]) {
-                case SHIP:
-                    myField[y][x] = SHIP_DEAD;
-                    hits += 1;
-                    scoreAI += 1;
-                    misses = 0;
-                    if (scoreAI == SHIP_COUNT) {
-                        gameOver ();
-                        break;
-                    }
-                    
-                    if (horyzontal) {
-                        if (right){
-                            x += 1;
-                            if (x > 9) {
-                                y = firstHit[1];
-                                x = firstHit[0]-1;
-                                right = false;
-                                misses +=1;
-                                
-                            } 
-                        } else {
-                            x -= 1; 
-                            if (x < 0) {
-                                shipSize = hits;
-                                hits = 0;
-                                createDMZ();
-                                break;
-                            }
-                        }
-                    } else {
-                        if (down){
-                            y +=1;
-                            if (y > 9) {
-                                y = firstHit[1] - 1;
-                                x = firstHit[0];
-                                down = false;
-                                misses +=1;
-                            } 
-                        } else {
-                            y -=1;
-                            if (y < 0) {
-                                shipSize = hits;
-                                createDMZ();
-                                hits = 0;
-                                break;
-                            }
-                        }
-                    }
-                    nextMove[0] = x;
-                    nextMove[1] = y;
-                    break;
-                //End of case SHIP
-                    
-                case EMPTY :
-                    myField[y][x] = SHOT;
-                    moveAI = false;
-                    misses +=1;
-                    if (horyzontal && misses == 1) {
-                        if (right) {
-                            x = firstHit[0]-1;
-                            right = false;
-                        } else {
-                                x = firstHit[0]+1;
-                                right = true;
-                        }
-                    } else if (!horyzontal && misses == 1){
-                        if (down) {
-                                y = firstHit[1]-1;
-                                down = false;
-                        } else {
-                                y = firstHit[1]+1;
-                                down = true;
-                         }
-                    } else if (horyzontal && misses == 2) {
-                        horyzontal = false;
-                        x = firstHit[0];
-                        if (firstHit[1] == 9){
-                            down = false;
-                            y = firstHit[1] - 1;
-                        } else {
-                            down = true;
-                            y = firstHit[1] + 1;
-                        }
-                    } else if (!horyzontal && misses == 2){
-                        horyzontal = true;
-                        y = firstHit[1];
-                        if (firstHit[0] == 9){
-                            right = false;
-                            x = firstHit[0] - 1;
-                        } else {
-                            right = true;
-                            x = firstHit[0] + 1;
-                        }
-                    } else if (horyzontal && misses > 2){
-                        right = false;
-                        x = firstHit[0]-1;
-                    } else {
-                        down = false;
-                        y = firstHit[1] - 1;
-                    }
-                    
-                    nextMove[0] = x;
-                    nextMove[1] = y;
-                    break;
-                //End of case EMPTY
-                    
-                default :
-                     misses +=1;
-                     if (horyzontal && misses == 1) {
-                        if (right) {
-                            x = firstHit[0]-1;
-                            right = false;
-                        } else {
-                                x = firstHit[0]+1;
-                                right = true;
-                        }
-                    } else if (!horyzontal && misses == 1){
-                        if (down) {
-                                y = firstHit[1]-1;
-                                down = false;
-                        } else {
-                                y = firstHit[1]+1;
-                                down = true;
-                         }
-                    } else if (horyzontal && misses == 2) {
-                        horyzontal = false;
-                        x = firstHit[0];
-                        if (firstHit[1] == 9){
-                            down = false;
-                            y = firstHit[1] - 1;
-                        } else {
-                            down = true;
-                            y = firstHit[1] + 1;
-                        }
-                    } else if (!horyzontal && misses == 2){
-                        horyzontal = true;
-                        y = firstHit[1];
-                        if (firstHit[0] == 9){
-                            right = false;
-                            x = firstHit[0] - 1;
-                        } else {
-                            right = true;
-                            x = firstHit[0] + 1;
-                        }
-                    } else if (horyzontal && misses > 2){
-                        right = false;
-                        x = firstHit[0]-1;
-                    } else {
-                        down = false;
-                        y = firstHit[1] - 1;
-                    }
-                    nextMove[0] = x;
-                    nextMove[1] = y;
-                    break;
-                //End of default
-            }
-            window.getPanel().paintImmediately(GUI.FIELD_2_X+GUI.CELL_SIZE*lastMove[0], 
-                                                GUI.FIELD_2_Y+GUI.CELL_SIZE*lastMove[1], 40,40);
-       }
-        
-        
-    public void aiMove3 () {
-            try {
-                Thread.sleep(200);
-            } catch(InterruptedException ex) {
-                Thread.currentThread().interrupt();
-            }
-            
-            int x = nextMove [0];
-            int y = nextMove [1];
-            lastMove[0] = x;
-            lastMove[1] = y;
-            
-            switch (myField [y][x]) {
-                case SHIP: 
-                    myField[y][x] = SHIP_DEAD;
-                    hits += 1;
-                    scoreAI += 1;
-                    
-                    if (hits == 5) {
-                        shipSize = hits;
-                        createDMZ ();
-                        hits = 0;
-                        break;
-                    }
-                    if (horyzontal) {
-                        if (right) {
-                            x += 1;
-                            if (x == CELLS_IN_ROW) {
-                                x = firstHit[0] - 1;
-                                right = false;
-                            }
-                        } else {
-                            x -= 1;
-                            if (x < 0) {
-                                x = firstHit[0] + 1;
-                                right = true;
-                            }
-                        }
-                    } else {
-                        if (down) {
-                            y += 1;
-                            if (y == CELLS_IN_ROW) {
-                                y = firstHit[1] - 1;
-                                down = false;
-                            }
-                        } else {
-                            y -= 1;
-                            if (y < 0) {
-                                y = firstHit[1] + 1;
-                                down = true;
-                            }
-                        }
-                    }
-                    nextMove[0] = x;
-                    nextMove[1] = y;
-                    break;
-                //End of case SHIP  
-                
-                case SHIP_DEAD:
-                    shipSize = hits;
-                    hits = 0;
-                    createDMZ ();
-                    break;
-                //End of case DEAD
-                    
-                case EMPTY:
-                    moveAI = false;
-                    myField[y][x] = SHOT;
-                    if (horyzontal) {
-                        x = firstHit[0] - 1;
-                        if (x < 0) {
-                            shipSize = hits;
-                            hits = 0;
-                            createDMZ ();
-                            break;
-                        }
-                        switch (myField[y][x]){
-                            case DMZ :
-                                shipSize = hits;
-                                hits = 0;
-                                createDMZ ();
-                                break;
-                            case EMPTY :
-                                nextMove[0] = x;
-                                right = false;
-                                break;
-                            default :
-                                nextMove[0] = x;
-                                right = false;
-                                break;
-                        }
-                    } else {
-                        y = firstHit[1] - 1;
-                        if (y < 0) {
-                            shipSize = hits;
-                            hits = 0;
-                            createDMZ ();
-                            break;
-                        }
-                        switch (myField[y][x]){
-                           case DMZ :
-                                shipSize = hits;
-                                hits = 0;
-                                createDMZ ();
-                                break;
-                           case EMPTY :
-                                nextMove[1] = y;
-                                right = false;
-                                break;
-                            default :
-                                nextMove[1] = y;
-                                down = false;
-                                break;
-                        }
-                    }
-                    break;
-                //End of case EMPTY
-                    
-                default:
-                    if (horyzontal) {
-                        x = firstHit[0] - 1;
-                        if (x < 0) {
-                            shipSize = hits;
-                            hits = 0;
-                            createDMZ ();
-                            break;
-                        }
-                        switch (myField[y][x]){
-                            case SHIP :
-                                nextMove[0] = x;
-                                right = false;
-                                break;
-                            case EMPTY :
-                                nextMove[0] = x;
-                                right = false;
-                                break;
-                            default :
-                                shipSize = hits;
-                                hits = 0;
-                                createDMZ ();
-                                break;
-                        }
-                    } else {
-                        y = firstHit[1] - 1;
-                        if (y < 0) {
-                            shipSize = hits;
-                            hits = 0;
-                            createDMZ ();
-                            break;
-                        }
-                        switch (myField[y][x]){
-                            case SHIP :
-                                nextMove[1] = y;
-                                down = false;
-                                break;
-                            case EMPTY :
-                                nextMove[1] = y;
-                                right = false;
-                                break;
-                            default :
-                                shipSize = hits;
-                                hits = 0;
-                                createDMZ ();
-                                break;
-                        }
-                    }
-                    break;
-                //End of default
-            }
+     public static void runMoveAI1() {
+        if(playerField.allShipsKilled()){
+            gameOver();
+            return;
         }
-    
-    
-    //Randomly deciding is the ship is going to be verticl or horizontal
-    public void placeShipAuto (int placeShipSize, int [][] field) {
-        Random random = new Random();
-        if (random.nextBoolean()) {
-            placeShipAutoH (placeShipSize, field);
-        } else {
-            placeShipAutoV (placeShipSize, field);
-        }
-    }
-    
-    
-     //Randomly places given horizontal ship.
-    private void placeShipAutoH (int placeShipSize, int [][] field) {
-        Random random = new Random();
-        int x;
-        int y;
-       
-        x = random.nextInt(CELLS_IN_ROW-(placeShipSize-1));
-        y = random.nextInt(CELLS_IN_ROW);
-        while (!checkSpaceH (placeShipSize, field, x, y)) {
-            x = random.nextInt(CELLS_IN_ROW-(placeShipSize-1));
-            y = random.nextInt(CELLS_IN_ROW);
-        }
-        
-        for (int i=0; i<placeShipSize; i++) {
-            field[y][x+i] = SHIP;
-        }
-        markDMZH (placeShipSize, field, x, y);
-    }
-    
-    
-    //Randomly places given vertical ship
-    private void placeShipAutoV (int placeShipSize, int [][] field) {
-        Random random = new Random();
-        int x;
-        int y;
-       
-        x = random.nextInt(CELLS_IN_ROW);
-        y = random.nextInt(CELLS_IN_ROW-(placeShipSize-1));
-        while (!checkSpaceV (placeShipSize, field, x, y)) {
-            x = random.nextInt(CELLS_IN_ROW);
-            y = random.nextInt(CELLS_IN_ROW-(placeShipSize-1));
-        }
-        for (int i=0; i<placeShipSize; i++) {
-            field[y+i][x] = SHIP;
-        }
-        markDMZV (placeShipSize, field, x, y);
-    }
-    
-    
-    //Removing DMZ created around the ships while placing them.
-    private void removeDMZ () {
-        for (int i=0; i<CELLS_IN_ROW; i++) {
-            for (int j=0; j<CELLS_IN_ROW; j++){
-                if (myField[i][j] == DMZ) {
-                    myField[i][j] = EMPTY;
-                }
-                if (enemyField[i][j] == DMZ) {
-                    enemyField[i][j] = EMPTY;
-                }
-            }
-        }
-    }
-    
-    //Finding X and Y coordinates of the first section of the ship 
-    private void createDMZ () {
-            int x = firstHit[0];
-            int y = firstHit[1];
-            int firstX = 0;
-            int firstY = 0;
-            if (horyzontal) {
-                for (int i = 0; i < 6; i++) {
-                    if ((x - i) < 0) {
-                        firstX = 0;
-                        firstY = y;
-                        break;
-                    } else if (myField[y][x-i] != SHIP_DEAD){
-                        firstX = x-i+1;
-                        firstY = y;
-                        break;
-                    }               
-                }
-            } else {
-                for (int i = 0; i < 6; i++) {
-                    if ((y - i) < 0) {
-                        firstX = x;
-                        firstY = 0;
-                        break;
-                    } else if (myField[y-i][x] != SHIP_DEAD){
-                        firstX = x;
-                        firstY = y-i+1;
-                        break;
-                        
-                    }               
-                }
-            }
-            if (horyzontal) {
-                markDMZH (shipSize, myField, firstX, firstY);
-            } else {
-                markDMZV (shipSize, myField, firstX, firstY);
-            }
-        }
-    
-    //Marking Demilitarised Zone around the horyzontal ship. 
-    //To let computer know where not to shoot (because it makes no sence).
-    private void markDMZH ( int shipSize, int [][] field, int x, int y) {
-        
-        int dmzSize = shipSize + 2;
-        int dmzY = y - 1;
-        if (dmzY<0) { dmzY++; }
-        int dmzX = x - 1;
-        if (dmzX<0) { dmzX++; dmzSize --;}
-        
-       for(int i=0; i<3; i++){
-            if ((dmzY+i) >= CELLS_IN_ROW) {
+        playerProbField.setProbabilities();
+        Point point = playerProbField.getRandomHighestProbabilityCell();
+        playerProbField.toString();
+        switch (playerField.getCell(point.x, point.y)) {
+            case Field.SHIP:
+                playerField.setCell(point.x, point.y, Field.SHIP_DEAD);
+                playerProbField.setCell(point.x, point.y, Field.SHIP_DEAD);
+                window.updateGraphics(Field.FIELD_1_X + Field.CELL_SIZE * point.x, 
+                        Field.FIELD_1_Y + Field.CELL_SIZE * point.y, Field.CELL_SIZE, Field.CELL_SIZE);
+                hits += 1;
+                firstHitX = point.x;
+                firstHitY = point.y;
+                updateBasicLimits(point.x, point.y);
+                chooseRandomDirection();
+                runMoveAI2(point.x, point.y);
                 break;
-            }
-            for (int j=0; j<dmzSize; j++) {
-                if ((dmzX+j) >= CELLS_IN_ROW) {
-                   continue;
-                } 
-                if (field[dmzY+i][dmzX+j] != SHIP && field[dmzY+i][dmzX+j] != SHIP_DEAD && field[dmzY+i][dmzX+j] != SHOT) {
-                    field[dmzY+i][dmzX+j] = DMZ;
-                }
-            }
-            if ( dmzY+i == 1 && y == 0) {
-                i++;
-            }
-        }
-    }
-        
-        
-    //Marking Demilitarised Zone around the vertical ship. 
-    //To let computer know where not to shoot (because it makes no sence).
-    private void markDMZV (int shipSize, int [][] field, int x, int y) {
-        int dmzSize = shipSize +2;
-        int dmzY = y - 1;
-        if (dmzY<0) { dmzY++; dmzSize--;}
-        int dmzX = x - 1;
-        if (dmzX<0) { dmzX++; }
-        for(int i=0; i<3; i++){
-            if ((dmzX+i) >= CELLS_IN_ROW) {
+            case Field.EMPTY:
+                playerField.setCell(point.x, point.y, Field.SHOT);
+                playerProbField.setCell(point.x, point.y, Field.SHOT);
+                window.updateGraphics(Field.FIELD_1_X + Field.CELL_SIZE * point.x, 
+                        Field.FIELD_1_Y + Field.CELL_SIZE * point.y, Field.CELL_SIZE, Field.CELL_SIZE);
+                moveAI = false;
                 break;
-            }
-            for (int j=0; j<dmzSize; j++) {
-                if ((dmzY+j) >= CELLS_IN_ROW) {
-                   continue;
-                } 
-                if (field[dmzY+j][dmzX+i] == EMPTY) {
-                    field[dmzY+j][dmzX+i] = DMZ;
-                }
-            }
-            if ( dmzX+i == 1 && x == 0) {
-                i++;
-            }
-        }
-    }
-    
-    
-    //Checkin if there is enough space to place the horyzontal ship starting from the given point.
-    private boolean checkSpaceH (int shipSize, int [][] field, int x, int y) {
-        boolean freeSpace = false;
-        for (int i=0; i<shipSize; i++) {
-            if (field[y][x+i] != 0) {
-                freeSpace = false;
-                break;
-            }
-            freeSpace = true;
-            } 
-        return freeSpace;
+         }
+     }
+     
+     public static void runMoveAI2(int x, int y) {
+        if(isDestroyed()) {
+            sinkShip();
+            runMoveAI();
+            return;
         } 
-
-    //Checkin if there is enough space to place the vertical ship starting from the given point.
-    private boolean checkSpaceV (int shipSize, int [][] field, int x, int y) {
-        boolean freeSpace = false;
-        for (int i=0; i<shipSize; i++) {
-            if (field[y+i][x] != 0) {
-                freeSpace = false;
-                break;
-            }
-            freeSpace = true;
-        } 
-        return freeSpace;
-    }
+        if(hr) {
+            proceedHR(x, y);
+        } else if(hl) {
+            proceedHL(x, y);
+        } else if(vd) {
+            proceedVD(x, y);
+        } else if(vu) {
+            proceedVU(x, y);
+        }
+     }
+     
+     private static void chooseRandomDirection() {
+         hr = false;
+         hl = false;
+         vd = false;
+         vu = false;
+         if(random.nextBoolean()) {
+             if(random.nextBoolean()) {
+                 hr = true;
+             } else {
+                 hl = true;
+             }
+         } else {
+             if(random.nextBoolean()) {
+                vd = true;
+             } else {
+                vu = true;
+             }
+         }
+         if((hr && limitR) || (hl && limitL) || (vd && limitD) || (vu && limitU)) {
+             chooseRandomDirection();
+         } 
+     }
     
+        
     //Game Over.
-    public void gameOver () {
-        if (scoreAI > scorePlayer) {
+    public static void gameOver () {
+        if (playerField.allShipsKilled()) {
             window.getJLabel().setText("Game over. I win!");
-            
         } else {
             window.getJLabel().setText("Game over. You win!");
         }
@@ -712,84 +166,271 @@ public class Battleships {
         moveAI = false;
         game = false;
     }
-    
-    public boolean getGame () {
-        return this.game;
+
+    private static void updateBasicLimits(int x, int y) {
+        if(x == 0) {
+            limitL = true;
+        }
+        if(x == Field.CELLS_IN_ROW) {
+            limitR = true;
+        }
+        if(y == 0) {
+            limitU = true;
+        }
+        if(y == Field.CELLS_IN_ROW) {
+            limitD = true;
+        }
+    }
+
+    private static boolean isDestroyed() {
+        boolean horyzontal = (hr || hl);
+        if(limitR && limitL && limitU && limitD) {
+            return true;
+        } 
+        if(limitR && limitL && horyzontal && hits > 1) {
+            return true;
+        }
+        if(limitD && limitU && !horyzontal && hits > 1) {
+            return true;
+        }
+        if(hits >= playerField.getBiggestShip()) {
+            return true;
+        }
+        return false;
     }
     
-    public boolean getMoveAI () {
-        return this.moveAI;
-    } 
-    
-    public int [][] getMyField () {
-        return this.myField;
+    private static void sinkShip() {
+        boolean horyzontal = (hr || hl);
+        playerField.createDMZ(hits, firstHitX, firstHitY, horyzontal);
+        playerProbField.createDMZ(hits, firstHitX, firstHitY, horyzontal);
+        playerField.removeShip(hits);
+        playerProbField.removeShip(hits);
+        window.updateGraphics();
+        limitR = false;
+        limitL = false;
+        limitU = false;
+        limitD = false;
+        hits = 0;
+    }
+
+    private static void proceedHR(int x, int y) {
+        int thisMoveX = x + 1;
+        int thisMoveY = y;
+        if(thisMoveX >= Field.CELLS_IN_ROW && hits == 1) {
+            limitR = true;
+            chooseRandomDirection();
+            runMoveAI2(firstHitX, firstHitY);
+            return;
+        } else if (thisMoveX >= Field.CELLS_IN_ROW) {
+            limitR = true;
+            hr = false;
+            hl = true;
+            runMoveAI2(firstHitX, firstHitY);
+            return;
+        } 
+        switch (playerField.getCell(thisMoveX, thisMoveY)) {
+            case Field.SHIP:
+                playerField.setCell(thisMoveX, thisMoveY, Field.SHIP_DEAD);
+                playerProbField.setCell(x, y, Field.SHIP_DEAD);
+                window.updateGraphics(Field.FIELD_1_X + Field.CELL_SIZE * thisMoveX, 
+                        Field.FIELD_1_Y + Field.CELL_SIZE * thisMoveY, Field.CELL_SIZE, Field.CELL_SIZE);
+                hits += 1;
+                runMoveAI2(thisMoveX, thisMoveY);
+                break;
+            case Field.EMPTY:
+                limitR = true;
+                playerField.setCell(thisMoveX, thisMoveY, Field.SHOT);
+                playerProbField.setCell(thisMoveX, thisMoveY, Field.SHOT);
+                window.updateGraphics(Field.FIELD_1_X + Field.CELL_SIZE * thisMoveX, 
+                        Field.FIELD_1_Y + Field.CELL_SIZE * thisMoveY, Field.CELL_SIZE, Field.CELL_SIZE);
+                moveAI = false;
+                if(hits == 1) {
+                    chooseRandomDirection();
+                } else {
+                    hr = false;
+                    hl = true;
+                }
+                break;
+            default:
+                limitR = true;
+                if(hits == 1) {
+                   chooseRandomDirection();
+                   runMoveAI2(firstHitX, firstHitY);
+                } else {
+                   hr = false;
+                   hl = true;
+                   runMoveAI2(firstHitX, firstHitY);
+                }
+                break;
+        }
+    }
+
+    private static void proceedHL(int x, int y) {
+        int thisMoveX = x - 1;
+        int thisMoveY = y;
+        if(thisMoveX < 0 && hits == 1) {
+            limitL = true;
+            chooseRandomDirection();
+            runMoveAI2(firstHitX, firstHitY);
+            return;
+        } else if (thisMoveX < 0) {
+            limitL = true;
+            hl = false;
+            hr = true;
+            runMoveAI2(firstHitX, firstHitY);
+            return;
+        } 
+        switch (playerField.getCell(thisMoveX, thisMoveY)) {
+            case Field.SHIP:
+                playerField.setCell(thisMoveX, thisMoveY, Field.SHIP_DEAD);
+                playerProbField.setCell(thisMoveX, thisMoveY, Field.SHIP_DEAD);
+                window.updateGraphics(Field.FIELD_1_X + Field.CELL_SIZE * thisMoveX, 
+                        Field.FIELD_1_Y + Field.CELL_SIZE * thisMoveY, Field.CELL_SIZE, Field.CELL_SIZE);
+                hits += 1;
+                runMoveAI2(thisMoveX, thisMoveY);
+                break;
+            case Field.EMPTY:
+                limitL = true;
+                playerField.setCell(thisMoveX, thisMoveY, Field.SHOT);
+                playerProbField.setCell(thisMoveX, thisMoveY, Field.SHOT);
+                window.updateGraphics(Field.FIELD_1_X + Field.CELL_SIZE * thisMoveX, 
+                        Field.FIELD_1_Y + Field.CELL_SIZE * thisMoveY, Field.CELL_SIZE, Field.CELL_SIZE);
+                moveAI = false;
+                if(hits == 1) {
+                   chooseRandomDirection();
+                } else {
+                   hl = false;
+                   hr = true;
+                }
+                break;
+            default:
+                limitL = true;
+                if(hits == 1) {
+                   chooseRandomDirection();
+                   runMoveAI2(firstHitX, firstHitY);
+                } else {
+                   hl = false;
+                   hr = true;
+                   runMoveAI2(firstHitX, firstHitY);
+                }
+                break;
+        }
+    }
+
+    private static void proceedVD(int x, int y) {
+        int thisMoveX = x;
+        int thisMoveY = y + 1;
+        if(thisMoveY >= Field.CELLS_IN_ROW && hits == 1) {
+            limitD = true;
+            chooseRandomDirection();
+            runMoveAI2(firstHitX, firstHitY);
+            return;
+        } else if (thisMoveY >= Field.CELLS_IN_ROW) {
+            limitD = true;
+            vd = false;
+            vu = true;
+            runMoveAI2(firstHitX, firstHitY);
+            return;
+        } 
+        switch (playerField.getCell(thisMoveX, thisMoveY)) {
+            case Field.SHIP:
+                playerField.setCell(thisMoveX, thisMoveY, Field.SHIP_DEAD);
+                playerProbField.setCell(thisMoveX, thisMoveY, Field.SHIP_DEAD);
+                window.updateGraphics(Field.FIELD_1_X + Field.CELL_SIZE * thisMoveX, 
+                        Field.FIELD_1_Y + Field.CELL_SIZE * thisMoveY, Field.CELL_SIZE, Field.CELL_SIZE);
+                hits += 1;
+                runMoveAI2(thisMoveX, thisMoveY);
+                break;
+            case Field.EMPTY:
+                limitD = true;
+                playerField.setCell(thisMoveX, thisMoveY, Field.SHOT);
+                playerProbField.setCell(thisMoveX, thisMoveY, Field.SHOT);
+                window.updateGraphics(Field.FIELD_1_X + Field.CELL_SIZE * thisMoveX, 
+                        Field.FIELD_1_Y + Field.CELL_SIZE * thisMoveY, Field.CELL_SIZE, Field.CELL_SIZE);
+                moveAI = false;
+                if(hits == 1) {
+                   chooseRandomDirection();
+                } else {
+                   vd = false;
+                   vu = true;
+                }
+                break;
+            default:
+                limitD = true;
+                if(hits == 1) {
+                   chooseRandomDirection();
+                   runMoveAI2(firstHitX, firstHitY);
+                } else {
+                   vd = false;
+                   vu = true;
+                   runMoveAI2(firstHitX, firstHitY);
+                }
+                break;
+        }
+    }
+
+    private static void proceedVU(int x, int y) {
+        int thisMoveX = x;
+        int thisMoveY = y - 1;
+        if(thisMoveY < 0 && hits == 1) {
+            limitU = true;
+            chooseRandomDirection();
+            runMoveAI2(firstHitX, firstHitY);
+            return;
+        } else if (thisMoveY < 0) {
+            limitU = true;
+            vu = false;
+            vd = true;
+            runMoveAI2(firstHitX, firstHitY);
+            return;
+        } 
+        switch (playerField.getCell(thisMoveX, thisMoveY)) {
+            case Field.SHIP:
+                playerField.setCell(thisMoveX, thisMoveY, Field.SHIP_DEAD);
+                playerProbField.setCell(thisMoveX, thisMoveY, Field.SHIP_DEAD);
+                window.updateGraphics(Field.FIELD_1_X + Field.CELL_SIZE * thisMoveX, 
+                        Field.FIELD_1_Y + Field.CELL_SIZE * thisMoveY, Field.CELL_SIZE, Field.CELL_SIZE);
+                hits += 1;
+                runMoveAI2(thisMoveX, thisMoveY);
+                break;
+            case Field.EMPTY:
+                limitU = true;
+                playerField.setCell(thisMoveX, thisMoveY, Field.SHOT);
+                playerProbField.setCell(thisMoveX, thisMoveY, Field.SHOT);
+                window.updateGraphics(Field.FIELD_1_X + Field.CELL_SIZE * thisMoveX, 
+                        Field.FIELD_1_Y + Field.CELL_SIZE * thisMoveY, Field.CELL_SIZE, Field.CELL_SIZE);
+                moveAI = false;
+                if(hits == 1) {
+                   chooseRandomDirection();
+                } else {
+                   vu = false;
+                   vd = true;
+                }
+                break;
+            default:
+                limitU = true;
+                if(hits == 1) {
+                   chooseRandomDirection();
+                   runMoveAI2(firstHitX, firstHitY);
+                } else {
+                   vu = false;
+                   vd = true;
+                   runMoveAI2(firstHitX, firstHitY);
+                }
+                break;
+        }
+    }
+        
+    public void setGame(boolean g) {
+        game = g;
     }
     
-    public int [][] getEnemyField () {
-        return this.enemyFieldShow;
+    public static int getPlayerFieldCell(int x, int y) {
+        return playerField.getCell(x, y);
     }
     
-    public int getScorePlayer () {
-        return this.scorePlayer;
+    public static int getEnemyFieldCell(int x, int y) {
+        return enemyField.getCell(x, y);
     }
     
-    public int getScoreAI () {
-        return this.scoreAI;
-    }
-    
-    public int getHits () {
-        return this.hits;
-    }
-    
-    public int getMisses () {
-        return this.misses;
-    }
-    
-    public int [] getNextMove () {
-        return this.nextMove;
-    }
-    
-    public int [] getLastMove () {
-        return this.lastMove;
-    }
-    
-    public void setGame (boolean game) {
-        this.game = game;
-    }
-    
-    public void getMoveAI (boolean moveAI) {
-        this.moveAI = moveAI;
-    } 
-    
-    public void getMyField (int [][] myField) {
-        this.myField = myField;
-    }
-    
-    public void getEnemyField (int [][] enemyField) {
-        this.enemyField = enemyField;
-    }
-    
-    public void getScorePlayer (int scorePlayer) {
-        this.scorePlayer = scorePlayer;
-    }
-    
-    public void getScoreAI (int scoreAI) {
-        this.scoreAI = scoreAI;
-    }
-    
-    public void getHits (int hits) {
-        this.hits = hits;
-    }
-    
-    public void getMisses (int misses) {
-        this.misses = misses;
-    }
-    
-    public void getNextMove (int [] nextMove) {
-        this.nextMove = nextMove;
-    }
-    
-    public void getLastMove (int [] lastMove) {
-        this.lastMove = lastMove;
-    }
 }
