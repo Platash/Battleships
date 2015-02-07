@@ -133,8 +133,6 @@ public class GUI extends JFrame{
                             g2.drawImage(shot, null, Field.FIELD_1_X + Field.CELL_SIZE * j, 
                                     Field.FIELD_1_Y + Field.CELL_SIZE * i);
                             break;
-                        default:
-                            break;
                    }
                 }
             }
@@ -145,15 +143,13 @@ public class GUI extends JFrame{
                             g2.drawImage(shipDead, null, Field.FIELD_2_X + Field.CELL_SIZE * j, 
                                     Field.FIELD_2_Y + Field.CELL_SIZE * i);
                             break;
-                        case Field.SHIP: 
-                            g2.drawImage(ship, null, Field.FIELD_2_X + Field.CELL_SIZE * j, 
-                                    Field.FIELD_2_Y + Field.CELL_SIZE * i);
-                            break;
+//                        case Field.SHIP: 
+//                            g2.drawImage(ship, null, Field.FIELD_2_X + Field.CELL_SIZE * j, 
+//                                    Field.FIELD_2_Y + Field.CELL_SIZE * i);
+//                            break;
                         case Field.SHOT:
                             g2.drawImage(shot, null, Field.FIELD_2_X + Field.CELL_SIZE*j, 
                                     Field.FIELD_2_Y + Field.CELL_SIZE * i);
-                            break;
-                        default:
                             break;
                     }
                 }

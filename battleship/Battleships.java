@@ -54,14 +54,14 @@ public class Battleships {
     
     //Players move analysis
     public static void runMovePlayer(int x, int y) {
-        if(enemyField.playerScore == Field.SHIPCELL_COUNT) {
-            gameOver();
-            return;
-        }
         switch (enemyField.getCell(x, y)) {
                 case Field.SHIP :
                     enemyField.setCell(x, y, Field.SHIP_DEAD);
                     enemyField.playerScore++;
+                    if(enemyField.playerScore == Field.SHIPCELL_COUNT) {
+                        gameOver();
+                        return;
+                    }
                     break;
                 case Field.EMPTY :
                     enemyField.setCell(x, y, Field.SHOT);
@@ -102,6 +102,9 @@ public class Battleships {
                 firstHitY = point.y;
                 updateBasicLimits(point.x, point.y);
                 chooseRandomDirection();
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {}
                 runMoveAI2(point.x, point.y);
                 break;
             case Field.EMPTY:
