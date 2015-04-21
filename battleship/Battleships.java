@@ -2,6 +2,8 @@ package battleship;
 
 import java.awt.Point;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Battleships {
     
@@ -58,6 +60,8 @@ public class Battleships {
                 case Field.SHIP :
                     enemyField.setCell(x, y, Field.SHIP_DEAD);
                     enemyField.playerScore++;
+                    window.updateGraphics(Field.FIELD_2_X + Field.CELL_SIZE * x, 
+                        Field.FIELD_2_Y + Field.CELL_SIZE * y, Field.CELL_SIZE, Field.CELL_SIZE);
                     if(enemyField.playerScore == Field.SHIPCELL_COUNT) {
                         gameOver();
                         return;
@@ -65,12 +69,17 @@ public class Battleships {
                     break;
                 case Field.EMPTY :
                     enemyField.setCell(x, y, Field.SHOT);
+                    window.updateGraphics(Field.FIELD_2_X + Field.CELL_SIZE * x, 
+                        Field.FIELD_2_Y + Field.CELL_SIZE * y, Field.CELL_SIZE, Field.CELL_SIZE);
                     moveAI = true;
+                    try {
+                        Thread.sleep(300);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(Battleships.class.getName()).log(Level.SEVERE, null, ex);
+                    }
                     runMoveAI();
                     break;
             }
-        window.updateGraphics(Field.FIELD_2_X + Field.CELL_SIZE * x, 
-                Field.FIELD_2_Y + Field.CELL_SIZE * y, Field.CELL_SIZE, Field.CELL_SIZE);
     }
     
        
@@ -90,7 +99,7 @@ public class Battleships {
         }
         playerProbField.setProbabilities();
         Point point = playerProbField.getRandomHighestProbabilityCell();
-        playerProbField.toString();
+        //playerProbField.toString();
         switch (playerField.getCell(point.x, point.y)) {
             case Field.SHIP:
                 playerField.setCell(point.x, point.y, Field.SHIP_DEAD);
@@ -115,6 +124,11 @@ public class Battleships {
                 moveAI = false;
                 break;
          }
+        try {
+            Thread.sleep(300);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Battleships.class.getName()).log(Level.SEVERE, null, ex);
+        }
      }
      
      public static void runMoveAI2(int x, int y) {
@@ -131,6 +145,11 @@ public class Battleships {
             proceedVD(x, y);
         } else if(vu) {
             proceedVU(x, y);
+        }
+        try {
+            Thread.sleep(300);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(Battleships.class.getName()).log(Level.SEVERE, null, ex);
         }
      }
      

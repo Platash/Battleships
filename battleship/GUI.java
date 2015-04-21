@@ -51,7 +51,7 @@ public class GUI extends JFrame{
             final JButton newGame = new JButton ("New game");
             final JButton about = new JButton ("Rules");
             newGame.setFont(new Font("Arial", Font.PLAIN, 20));
-            newGame.setPreferredSize(new Dimension(140, 40));
+            newGame.setSize(new Dimension(140, 40));
             newGame.addActionListener(new ActionListener (){
                 @Override
                 public void actionPerformed(ActionEvent e){
@@ -102,7 +102,7 @@ public class GUI extends JFrame{
             add (newGame);
             add (about);
             add (Box.createRigidArea(new Dimension(30,80)));
-            add (text);
+            //add (text);
         }
 
         @Override
